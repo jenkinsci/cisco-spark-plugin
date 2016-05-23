@@ -54,9 +54,9 @@
 		</plugins>
 	</build>
 	<scm>
-		<connection>scm:git:ssh://github.com/jenkinsci/spark-plugin.git</connection>
-		<developerConnection>scm:git:ssh://git@github.com/jenkinsci/spark-plugin.git</developerConnection>
-		<url>https://github.com/jenkinsci/spark-plugin</url>
+		<connection>scm:git:ssh://github.com/jenkinsci/cisco-spark-plugin.git</connection>
+		<developerConnection>scm:git:ssh://git@github.com/jenkinsci/cisco-spark-plugin.git</developerConnection>
+		<url>https://github.com/jenkinsci/cisco-spark-plugin</url>
 	</scm>
 
 	<distributionManagement>
