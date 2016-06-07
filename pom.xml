@@ -8,7 +8,7 @@
 	</parent>
 
 	<artifactId>cisco-spark</artifactId>
-	<version>1.0.1-SNAPSHOT</version>
+	<version>1.0.2</version>
 	<packaging>hpi</packaging>
 	<name>Cisco Spark Plugin</name>
 	<url>https://wiki.jenkins-ci.org/display/JENKINS/Spark+Plugin</url>
@@ -62,7 +62,7 @@
 	<distributionManagement>
 		<repository>
 			<id>maven.jenkins-ci.org</id>
-			<url>http://maven.jenkins-ci.org:8081/content/repositories/releases/</url>
+			<url>http://maven.jenkins-ci.org/content/repositories/releases/</url>
 		</repository>
 	</distributionManagement>
 
