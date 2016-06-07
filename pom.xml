@@ -59,6 +59,7 @@
 		<url>https://github.com/jenkinsci/cisco-spark-plugin</url>
 	</scm>
 
+	<!-- mvn -X -B -Dmaven.test.skip=true deploy -->
 	<distributionManagement>
 		<repository>
 			<id>maven.jenkins-ci.org</id>
@@ -81,7 +82,3 @@
 		</developer>
 	</developers>
 </project>
-
-
-
-
