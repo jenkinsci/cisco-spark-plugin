@@ -27,6 +27,11 @@
     <f:textbox default="$${DEFAULT_CONTENT}" />
   </f:entry>
   
+  <f:entry field="invitetoroom">
+  <f:checkbox name="invitetoroom" checked="${instance.invitetoroom}"/>
+  <label>Invite committers to room if build is fail</label>
+  </f:entry>
+  
   <f:entry field="attachtestresult">
   <f:checkbox name="attachtestresult" checked="${instance.attachtestresult}"/>
   <label>Attach test results if existed</label>

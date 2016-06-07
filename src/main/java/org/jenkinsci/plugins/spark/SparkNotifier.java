@@ -4,11 +4,14 @@ import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.BuildListener;
 import hudson.model.Result;
+import hudson.model.User;
+import hudson.model.UserProperty;
 import hudson.scm.ChangeLogSet;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
+import hudson.tasks.Mailer;
 import hudson.tasks.Notifier;
 import hudson.tasks.Publisher;
 import hudson.tasks.test.AbstractTestResultAction;
@@ -19,6 +22,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -49,16 +53,18 @@ public class SparkNotifier extends Notifier {
     private final boolean disable;
     private final boolean notnotifyifsuccess;
     private final boolean attachcodechange;
+    private boolean invitetoroom;
     private boolean attachtestresult = true;
     private final String sparkRoomName;
     private final String publishContent;
     
 
     @DataBoundConstructor
-    public SparkNotifier(boolean disable, boolean notnotifyifsuccess, String sparkRoomName, String publishContent, boolean attachtestresult, boolean attachcodechange) {
+    public SparkNotifier(boolean disable, boolean notnotifyifsuccess, String sparkRoomName, String publishContent, boolean invitetoroom, boolean attachtestresult, boolean attachcodechange) {
         this.disable = disable;
         this.attachtestresult = attachtestresult;
         this.notnotifyifsuccess = notnotifyifsuccess;
+        this.invitetoroom = invitetoroom;
         this.attachcodechange = attachcodechange;
         this.sparkRoomName = sparkRoomName;
         this.publishContent = publishContent;
@@ -84,6 +90,10 @@ public class SparkNotifier extends Notifier {
         return notnotifyifsuccess;
     }
     
+    public boolean isInvitetoroom() {
+        return invitetoroom;
+    }
+    
     public boolean isAttachcodechange() {
         return attachcodechange;
     }
@@ -107,7 +117,7 @@ public class SparkNotifier extends Notifier {
         		logger.println(CISCO_SPARK_PLUGIN_NAME + "================[skiped: no need to notify due to success]=================");
             return true;
         }
-
+         
         notify(build, listener, logger);
         
         return true;
@@ -116,8 +126,10 @@ public class SparkNotifier extends Notifier {
 	private void notify(AbstractBuild build, BuildListener listener, PrintStream logger) {
 		logger.println(CISCO_SPARK_PLUGIN_NAME + "================[start]=================");
 		try {
-		    DescriptorImpl descriptor = getDescriptor();
+  		    DescriptorImpl descriptor = getDescriptor();
 		    SparkRoom sparkRoom = descriptor.getSparkRoom(sparkRoomName);
+ 			
+			inviteCommittersIfNeed(build, logger, sparkRoom);
 		    
 			SparkClient.sent(sparkRoom, "[message from cisco spark plugin for jenkins]");
 
@@ -137,6 +149,14 @@ public class SparkNotifier extends Notifier {
 		    logger.println(CISCO_SPARK_PLUGIN_NAME + e.getMessage());
 		    logger.println(CISCO_SPARK_PLUGIN_NAME + Arrays.toString(e.getStackTrace()));
 		    logger.println(CISCO_SPARK_PLUGIN_NAME + "================[end][failure]=================");
+		}
+	}
+
+	private void inviteCommittersIfNeed(AbstractBuild build, PrintStream logger, SparkRoom sparkRoom) throws Exception {
+		if(build.getResult()!= Result.SUCCESS && isInvitetoroom()){
+			logger.println(CISCO_SPARK_PLUGIN_NAME + "================[need invite committers to room]=================");
+			HashSet<String> scmCommiterEmails = getScmCommiterEmails(build, sparkRoom, logger);
+			SparkClient.invite(sparkRoom, scmCommiterEmails);
 		}
 	}
 
@@ -197,6 +217,24 @@ public class SparkNotifier extends Notifier {
 		}catch(Throwable throwable){
 		    logger.println(CISCO_SPARK_PLUGIN_NAME + throwable.getMessage());
 		}
+	}
+	
+	private HashSet<String> getScmCommiterEmails(AbstractBuild build, SparkRoom sparkRoom, PrintStream logger) throws Exception {
+		Set<User> culprits = build.getCulprits();
+		Iterator<User> iterator = culprits.iterator();
+		HashSet<String> emails = new HashSet<String>();
+		while(iterator.hasNext()){
+			User user = iterator.next();
+			Mailer.UserProperty property = user.getProperty(Mailer.UserProperty.class);
+            if(property!=null){
+                String address = property.getAddress();
+                if(address!=null && address.contains("@"))
+                	emails.add(address);
+            }
+
+		}
+	    logger.println(CISCO_SPARK_PLUGIN_NAME + "[Publish Content][Committers Email]" + emails);
+		return emails;
 	}
 
 	private void sendAtScmCommiters(AbstractBuild build, SparkRoom sparkRoom, PrintStream logger) throws Exception {
@@ -352,7 +390,7 @@ public class SparkNotifier extends Notifier {
 
 	@Override
 	public String toString() {
-		return "SparkNotifier [disable=" + disable + ", notnotifyifsuccess=" + notnotifyifsuccess
+		return "SparkNotifier [disable=" + disable + ", notnotifyifsuccess=" + notnotifyifsuccess + ", invitetoroom=" + invitetoroom 
 				+ ", attachcodechange=" + attachcodechange + ", attachtestresult=" + attachtestresult
 				+ ", sparkRoomName=" + sparkRoomName + ", publishContent=" + publishContent + "]";
 	}
