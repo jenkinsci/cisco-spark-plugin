@@ -11,7 +11,7 @@ system configure:
 
 job configure:
 
-![job configure](https://github.com/jiafu1115/spark-plugin/blob/master/job_config.jpg)
+![job configure](https://github.com/jiafu1115/spark-plugin/blob/master/jobconfig.jpg)
 
 run sample:
 
