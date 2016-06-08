@@ -113,9 +113,10 @@ public class SparkNotifier extends Notifier {
         }
         
         if(notnotifyifsuccess){
-        	if(build.getResult() == Result.SUCCESS)
+        	if(build.getResult() == Result.SUCCESS){
         		logger.println(CISCO_SPARK_PLUGIN_NAME + "================[skiped: no need to notify due to success]=================");
-            return true;
+                return true;
+        	}
         }
          
         notify(build, listener, logger);
