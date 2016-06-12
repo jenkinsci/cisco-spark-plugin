@@ -1,23 +1,5 @@
 package org.jenkinsci.plugins.spark;
 
-import hudson.Extension;
-import hudson.Launcher;
-import hudson.model.BuildListener;
-import hudson.model.Result;
-import hudson.model.User;
-import hudson.model.UserProperty;
-import hudson.scm.ChangeLogSet;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
-import hudson.tasks.BuildStepDescriptor;
-import hudson.tasks.BuildStepMonitor;
-import hudson.tasks.Mailer;
-import hudson.tasks.Notifier;
-import hudson.tasks.Publisher;
-import hudson.tasks.test.AbstractTestResultAction;
-import hudson.util.CopyOnWriteList;
-import hudson.util.FormValidation;
-
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
@@ -29,11 +11,6 @@ import java.util.Set;
 
 import javax.servlet.ServletException;
 
-import jenkins.model.Jenkins;
-import net.java.sezpoz.Index;
-import net.java.sezpoz.IndexItem;
-import net.sf.json.JSONObject;
-
 import org.jenkinsci.plugins.spark.client.SparkClient;
 import org.jenkinsci.plugins.spark.token.SparkToken;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
@@ -42,11 +19,32 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
+import hudson.Extension;
+import hudson.Launcher;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.model.BuildListener;
+import hudson.model.Result;
+import hudson.model.User;
+import hudson.scm.ChangeLogSet;
+import hudson.tasks.BuildStepDescriptor;
+import hudson.tasks.BuildStepMonitor;
+import hudson.tasks.Mailer;
+import hudson.tasks.Notifier;
+import hudson.tasks.Publisher;
+import hudson.tasks.test.AbstractTestResultAction;
+import hudson.util.CopyOnWriteList;
+import hudson.util.FormValidation;
+import jenkins.model.Jenkins;
+import net.java.sezpoz.Index;
+import net.java.sezpoz.IndexItem;
+import net.sf.json.JSONObject;
+
 
 public class SparkNotifier extends Notifier {
 
 	public static final String DEFAULT_CONTENT_KEY = "${DEFAULT_CONTENT}";
-    public static final String DEFAULT_CONTENT_VALUE = "${BUILD_STATUS}  ${JOB_NAME}:${BUILD_NUMBER}  ${JOB_URL}";
+    public static final String DEFAULT_CONTENT_VALUE = "${BUILD_STATUS}:${BUILD_URL}";
 
     private static final String CISCO_SPARK_PLUGIN_NAME = "[Cisco Spark Plugin]";
 
