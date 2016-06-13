@@ -101,18 +101,16 @@ public class SparkNotifier extends Notifier {
 	@Override
 	public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
 		PrintStream logger = listener.getLogger();
-		logger.println(CISCO_SPARK_PLUGIN_NAME + this.toString());
+		log(logger, this.toString());
 
 		if (disable) {
-			logger.println(CISCO_SPARK_PLUGIN_NAME
-			        + "================[skiped: no need to notify due to the plugin disabled]=================");
+			log(logger, "================[skiped: no need to notify due to the plugin disabled]=================");
 			return true;
 		}
 
 		if (notnotifyifsuccess) {
 			if (build.getResult() == Result.SUCCESS) {
-				logger.println(CISCO_SPARK_PLUGIN_NAME
-				        + "================[skiped: no need to notify due to success]=================");
+				log(logger, "================[skiped: no need to notify due to success]=================");
 				return true;
 			}
 		}
@@ -123,13 +121,13 @@ public class SparkNotifier extends Notifier {
 	}
 
 	private void notify(AbstractBuild build, BuildListener listener, PrintStream logger) {
-		logger.println(CISCO_SPARK_PLUGIN_NAME + "================[start]=================");
+		log(logger, "================[start]=================");
 		try {
 			DescriptorImpl descriptor = getDescriptor();
 			SparkRoom sparkRoom = descriptor.getSparkRoom(sparkRoomName);
-			SparkClient.sent(sparkRoom, "[message from cisco spark plugin for jenkins]");
 
-			//notify content
+			// notify content
+			SparkClient.sent(sparkRoom, "[message from cisco spark plugin for jenkins]");
 			inviteCommittersIfNeed(build, logger, sparkRoom);
 			atCommitters(build, sparkRoom, logger);
 			notifyCustomizedContent(build, listener, logger, sparkRoom);
@@ -137,20 +135,23 @@ public class SparkNotifier extends Notifier {
 				notifyTestResultIfExisted(build, sparkRoom, logger);
 			if (attachcodechange)
 				notifyCodeChanges(build, sparkRoom, logger);
-
 			SparkClient.sent(sparkRoom, "[message from cisco spark plugin for jenkins]");
-			logger.println(CISCO_SPARK_PLUGIN_NAME + "================[end][success]=================");
+
+			log(logger, "================[end][success]=================");
 		} catch (Exception e) {
-			logger.println(CISCO_SPARK_PLUGIN_NAME + e.getMessage());
-			logger.println(CISCO_SPARK_PLUGIN_NAME + Arrays.toString(e.getStackTrace()));
-			logger.println(CISCO_SPARK_PLUGIN_NAME + "================[end][failure]=================");
+			log(logger, e.getMessage());
+			log(logger, Arrays.toString(e.getStackTrace()));
+			log(logger, "================[end][failure]=================");
 		}
+	}
+
+	private void log(PrintStream logger, String msg) {
+		logger.println(CISCO_SPARK_PLUGIN_NAME + msg);
 	}
 
 	private void inviteCommittersIfNeed(AbstractBuild build, PrintStream logger, SparkRoom sparkRoom) throws Exception {
 		if (build.getResult() != Result.SUCCESS && isInvitetoroom()) {
-			logger.println(
-			        CISCO_SPARK_PLUGIN_NAME + "================[need invite committers to room]=================");
+			log(logger, "================[need invite committers to room]=================");
 			HashSet<String> scmCommiterEmails = getScmCommiterEmails(build, sparkRoom, logger);
 			SparkClient.invite(sparkRoom, scmCommiterEmails);
 		}
@@ -158,18 +159,17 @@ public class SparkNotifier extends Notifier {
 
 	private void notifyCustomizedContent(AbstractBuild build, BuildListener listener, PrintStream logger,
 	        SparkRoom sparkRoom) throws MacroEvaluationException, IOException, InterruptedException, Exception {
-		logger.println(CISCO_SPARK_PLUGIN_NAME + "[Expand content]Before Expand: " + publishContent);
+		log(logger, "[Expand content]Before Expand: " + publishContent);
 		String publishContentAfterInitialExpand = publishContent;
 		if (publishContent.contains(DEFAULT_CONTENT_KEY)) {
 			publishContentAfterInitialExpand = publishContent.replace(DEFAULT_CONTENT_KEY, DEFAULT_CONTENT_VALUE);
 		}
-		logger.println(CISCO_SPARK_PLUGIN_NAME + "[Expand content]Expand: " + publishContentAfterInitialExpand);
+		log(logger, "[Expand content]Expand: " + publishContentAfterInitialExpand);
 
 		String expandAll = TokenMacro.expandAll(build, listener, publishContentAfterInitialExpand, false,
 		        getPrivateMacros());
-		logger.println(CISCO_SPARK_PLUGIN_NAME + "[Expand content]Expand: " + expandAll);
-
-		logger.println(CISCO_SPARK_PLUGIN_NAME + "[Publish Content][begin]use:" + sparkRoom);
+		log(logger, "[Expand content]Expand: " + expandAll);
+		log(logger, "[Publish Content][begin]use:" + sparkRoom);
 		SparkClient.sent(sparkRoom, expandAll);
 	}
 
@@ -177,13 +177,13 @@ public class SparkNotifier extends Notifier {
 		ChangeLogSet<ChangeLogSet.Entry> changeSet = build.getChangeSet();
 		Object[] items = changeSet.getItems();
 		if (items.length > 0) {
-			logger.println(CISCO_SPARK_PLUGIN_NAME + "[Publish Content]changes:");
+			log(logger, "[Publish Content]changes:");
 			SparkClient.sent(sparkRoom, "[changes]");
 		}
 		for (Object entry : items) {
 			ChangeLogSet.Entry entryCasted = (ChangeLogSet.Entry) entry;
 			String content = "          " + entryCasted.getAuthor() + ":" + entryCasted.getAffectedPaths();
-			logger.println(CISCO_SPARK_PLUGIN_NAME + "[Publish Content]" + content);
+			log(logger, "[Publish Content]" + content);
 			SparkClient.sent(sparkRoom, content);
 		}
 	}
@@ -201,7 +201,7 @@ public class SparkNotifier extends Notifier {
 		try {
 			AbstractTestResultAction testResultAction = build.getAction(AbstractTestResultAction.class);
 			if (testResultAction != null) {
-				logger.println(CISCO_SPARK_PLUGIN_NAME + "[Publish Content]test results:");
+				log(logger, "[Publish Content]test results:");
 				SparkClient.sent(sparkRoom, "[test results]");
 				int totalCount = testResultAction.getTotalCount();
 				int failCount = testResultAction.getFailCount();
@@ -210,7 +210,7 @@ public class SparkNotifier extends Notifier {
 				        String.format("          total:%d, failed:%d, skiped:%d", totalCount, failCount, skipCount));
 			}
 		} catch (Throwable throwable) {
-			logger.println(CISCO_SPARK_PLUGIN_NAME + throwable.getMessage());
+			log(logger, throwable.getMessage());
 		}
 	}
 
@@ -229,7 +229,7 @@ public class SparkNotifier extends Notifier {
 			}
 
 		}
-		logger.println(CISCO_SPARK_PLUGIN_NAME + "[Publish Content][Committers Email]" + emails);
+		log(logger, "[Publish Content][Committers Email]" + emails);
 		return emails;
 	}
 
@@ -241,7 +241,7 @@ public class SparkNotifier extends Notifier {
 			Object next = iterator.next();
 			authors.append(" @" + next.toString());
 		}
-		logger.println(CISCO_SPARK_PLUGIN_NAME + "[Publish Content]" + authors.toString());
+		log(logger, "[Publish Content]" + authors.toString());
 		SparkClient.sent(sparkRoom, authors.toString());
 	}
 
