@@ -65,7 +65,6 @@ public class SparkNotifier extends Notifier {
 		this.attachcodechange = attachcodechange;
 		this.sparkRoomName = sparkRoomName;
 		this.publishContent = publishContent;
-		System.out.println(this.toString());
 	}
 
 	/**
@@ -209,11 +208,6 @@ public class SparkNotifier extends Notifier {
 				int skipCount = testResultAction.getSkipCount();
 				SparkClient.sent(sparkRoom,
 				        String.format("          total:%d, failed:%d, skiped:%d", totalCount, failCount, skipCount));
-				/*
-				 * List failedTests = testResultAction.getFailedTests();
-				 * if(failedTests.size()>0) SparkClient.sent(sparkRoom,
-				 * "        failed test cases:" + failedTests);
-				 */
 			}
 		} catch (Throwable throwable) {
 			logger.println(CISCO_SPARK_PLUGIN_NAME + throwable.getMessage());
