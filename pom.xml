@@ -4,11 +4,11 @@
 	<parent>
 		<groupId>org.jenkins-ci.plugins</groupId>
 		<artifactId>plugin</artifactId>
-		<version>1.466</version>
+		<version>1.609.2</version>
 	</parent>
 
 	<artifactId>cisco-spark</artifactId>
-	<version>1.0.5</version>
+	<version>1.1.0</version>
 	<packaging>hpi</packaging>
 	<name>Cisco Spark Plugin</name>
 	<url>https://wiki.jenkins-ci.org/display/JENKINS/Spark+Plugin</url>
@@ -29,18 +29,59 @@
 		</pluginRepository>
 	</pluginRepositories>
 
+	<properties>
+		<maven-hpi-plugin.version>1.96</maven-hpi-plugin.version>
+		<workflow.version>1.11</workflow.version>
+	</properties>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.jenkins-ci.plugins</groupId>
 			<artifactId>token-macro</artifactId>
-			<version>1.8.1</version>
+			<version>2.0</version>
 			<optional>true</optional>
 		</dependency>
+		<dependency>
+			<groupId>org.jenkins-ci.plugins</groupId>
+			<artifactId>junit</artifactId>
+			<version>1.15</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jenkins-ci.plugins</groupId>
+			<artifactId>mailer</artifactId>
+			<version>1.20</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jenkins-ci.plugins</groupId>
+			<artifactId>email-ext</artifactId>
+			<version>2.41</version>
+		</dependency>
+		<!-- for workflow support -->
+		<dependency>
+			<groupId>org.jenkins-ci.plugins.workflow</groupId>
+			<artifactId>workflow-step-api</artifactId>
+			<version>${workflow.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jenkins-ci.plugins.workflow</groupId>
+			<artifactId>workflow-cps</artifactId>
+			<version>${workflow.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.jenkins-ci.plugins.workflow</groupId>
+			<artifactId>workflow-job</artifactId>
+			<version>${workflow.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency> <!-- StepConfigTester -->
+			<groupId>org.jenkins-ci.plugins.workflow</groupId>
+			<artifactId>workflow-step-api</artifactId>
+			<classifier>tests</classifier>
+			<version>${workflow.version}</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
-
-	<properties>
-		<maven-hpi-plugin.version>1.96</maven-hpi-plugin.version>
-	</properties>
 
 	<build>
 		<plugins>

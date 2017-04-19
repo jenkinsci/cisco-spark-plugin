@@ -15,17 +15,21 @@ import org.jenkinsci.plugins.spark.client.SparkClient;
 import org.jenkinsci.plugins.spark.token.SparkToken;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
+import hudson.plugins.emailext.plugins.recipients.RecipientProviderUtilities;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 import hudson.Extension;
+import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.model.User;
+import hudson.model.Run;
+import hudson.model.TaskListener;
 import hudson.scm.ChangeLogSet;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
@@ -33,6 +37,7 @@ import hudson.tasks.Mailer;
 import hudson.tasks.Notifier;
 import hudson.tasks.Publisher;
 import hudson.tasks.test.AbstractTestResultAction;
+import jenkins.tasks.SimpleBuildStep;
 import hudson.util.CopyOnWriteList;
 import hudson.util.FormValidation;
 import jenkins.model.Jenkins;
@@ -40,7 +45,7 @@ import net.java.sezpoz.Index;
 import net.java.sezpoz.IndexItem;
 import net.sf.json.JSONObject;
 
-public class SparkNotifier extends Notifier {
+public class SparkNotifier extends Notifier implements SimpleBuildStep {
 
 	public static final String DEFAULT_CONTENT_KEY = "${DEFAULT_CONTENT}";
 	public static final String DEFAULT_CONTENT_VALUE = "${BUILD_STATUS}:${BUILD_URL}";
@@ -99,28 +104,28 @@ public class SparkNotifier extends Notifier {
 	}
 
 	@Override
-	public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) {
+	public void perform(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener) throws InterruptedException, IOException {
 		PrintStream logger = listener.getLogger();
 		log(logger, this.toString());
 
 		if (disable) {
 			log(logger, "================[skiped: no need to notify due to the plugin disabled]=================");
-			return true;
+			return;
 		}
 
 		if (notnotifyifsuccess) {
 			if (build.getResult() == Result.SUCCESS) {
 				log(logger, "================[skiped: no need to notify due to success]=================");
-				return true;
+				return;
 			}
 		}
 
-		notify(build, listener, logger);
+		notify(build, workspace, listener, logger);
 
-		return true;
+		return;
 	}
 
-	private void notify(AbstractBuild build, BuildListener listener, PrintStream logger) {
+	private void notify(Run<?, ?> build, FilePath workspace, TaskListener listener, PrintStream logger) {
 		log(logger, "================[start]=================");
 		try {
 			DescriptorImpl descriptor = getDescriptor();
@@ -130,7 +135,7 @@ public class SparkNotifier extends Notifier {
 			SparkClient.sent(sparkRoom, "[message from cisco spark plugin for jenkins]");
 			inviteCommittersIfNeed(build, logger, sparkRoom);
 			atCommitters(build, sparkRoom, logger);
-			notifyCustomizedContent(build, listener, logger, sparkRoom);
+			notifyCustomizedContent(build, workspace, listener, logger, sparkRoom);
 			if (attachtestresult)
 				notifyTestResultIfExisted(build, sparkRoom, logger);
 			if (attachcodechange)
@@ -149,7 +154,7 @@ public class SparkNotifier extends Notifier {
 		logger.println(CISCO_SPARK_PLUGIN_NAME + msg);
 	}
 
-	private void inviteCommittersIfNeed(AbstractBuild build, PrintStream logger, SparkRoom sparkRoom) throws Exception {
+	private void inviteCommittersIfNeed(Run<?, ?> build, PrintStream logger, SparkRoom sparkRoom) throws Exception {
 		if (build.getResult() != Result.SUCCESS && isInvitetoroom()) {
 			log(logger, "================[need invite committers to room]=================");
 			HashSet<String> scmCommiterEmails = getScmCommiterEmails(build, sparkRoom, logger);
@@ -157,7 +162,7 @@ public class SparkNotifier extends Notifier {
 		}
 	}
 
-	private void notifyCustomizedContent(AbstractBuild build, BuildListener listener, PrintStream logger,
+	private void notifyCustomizedContent(Run<?, ?> build, FilePath workspace, TaskListener listener, PrintStream logger,
 	        SparkRoom sparkRoom) throws MacroEvaluationException, IOException, InterruptedException, Exception {
 		log(logger, "[Expand content]Before Expand: " + publishContent);
 		String publishContentAfterInitialExpand = publishContent;
@@ -166,15 +171,25 @@ public class SparkNotifier extends Notifier {
 		}
 		log(logger, "[Expand content]Expand: " + publishContentAfterInitialExpand);
 
-		String expandAll = TokenMacro.expandAll(build, listener, publishContentAfterInitialExpand, false,
+		String expandAll = TokenMacro.expandAll(build, workspace, listener, publishContentAfterInitialExpand, false,
 		        getPrivateMacros());
 		log(logger, "[Expand content]Expand: " + expandAll);
 		log(logger, "[Publish Content][begin]use:" + sparkRoom);
 		SparkClient.sent(sparkRoom, expandAll);
 	}
 
-	private void notifyCodeChanges(AbstractBuild build, SparkRoom sparkRoom, PrintStream logger) throws Exception {
-		ChangeLogSet<ChangeLogSet.Entry> changeSet = build.getChangeSet();
+	// copied from hudson.tasks.MailSender
+	private static ChangeLogSet<? extends ChangeLogSet.Entry> getChangeSet(Run<?,?> build) {
+		if (build instanceof AbstractBuild) {
+			return ((AbstractBuild<?,?>) build).getChangeSet();
+		} else {
+			// TODO JENKINS-24141 call getChangeSets in general
+			return ChangeLogSet.createEmpty(build);
+		}
+	}
+
+	private void notifyCodeChanges(Run<?, ?> build, SparkRoom sparkRoom, PrintStream logger) throws Exception {
+		ChangeLogSet<ChangeLogSet.Entry> changeSet = (ChangeLogSet<ChangeLogSet.Entry>) getChangeSet(build);
 		Object[] items = changeSet.getItems();
 		if (items.length > 0) {
 			log(logger, "[Publish Content]changes:");
@@ -196,7 +211,7 @@ public class SparkNotifier extends Notifier {
 	 * @param logger
 	 * @throws Exception
 	 */
-	private void notifyTestResultIfExisted(AbstractBuild build, SparkRoom sparkRoom, PrintStream logger)
+	private void notifyTestResultIfExisted(Run<?, ?> build, SparkRoom sparkRoom, PrintStream logger)
 	        throws Exception {
 		try {
 			AbstractTestResultAction testResultAction = build.getAction(AbstractTestResultAction.class);
@@ -214,9 +229,42 @@ public class SparkNotifier extends Notifier {
 		}
 	}
 
-	private HashSet<String> getScmCommiterEmails(AbstractBuild build, SparkRoom sparkRoom, PrintStream logger)
+	// adapted from hudson.plugins.emailext.plugins.recipients.CulpritsRecipientProvider
+	private static Set<User> getCulprits(Run<?, ?> run) {
+		final class Debug implements RecipientProviderUtilities.IDebug {
+			public void send(final String format, final Object... args) {
+			}
+		}
+		final Debug debug = new Debug();
+
+		Set<User> users;
+		if (run instanceof AbstractBuild) {
+			users = ((AbstractBuild<?,?>)run).getCulprits();
+		} else {
+			List<Run<?, ?>> builds = new ArrayList<Run<?, ?>>();
+			Run<?, ?> build = run;
+			builds.add(build);
+			build = build.getPreviousCompletedBuild();
+			while (build != null) {
+				final Result buildResult = build.getResult();
+				if (buildResult != null) {
+					if (buildResult.isWorseThan(Result.SUCCESS)) {
+						debug.send("Including build %s with status %s", build.getId(), buildResult);
+						builds.add(build);
+					} else {
+						break;
+					}
+				}
+				build = build.getPreviousCompletedBuild();
+			}
+			users = RecipientProviderUtilities.getChangeSetAuthors(builds, debug);
+		}
+		return users;
+	}
+
+	private HashSet<String> getScmCommiterEmails(Run<?, ?> build, SparkRoom sparkRoom, PrintStream logger)
 	        throws Exception {
-		Set<User> culprits = build.getCulprits();
+		Set<User> culprits = getCulprits(build);
 		Iterator<User> iterator = culprits.iterator();
 		HashSet<String> emails = new HashSet<String>();
 		while (iterator.hasNext()) {
@@ -233,8 +281,8 @@ public class SparkNotifier extends Notifier {
 		return emails;
 	}
 
-	private void atCommitters(AbstractBuild build, SparkRoom sparkRoom, PrintStream logger) throws Exception {
-		Set culprits = build.getCulprits();
+	private void atCommitters(Run<?, ?> build, SparkRoom sparkRoom, PrintStream logger) throws Exception {
+		Set culprits = getCulprits(build);
 		Iterator iterator = culprits.iterator();
 		StringBuffer authors = new StringBuffer();
 		while (iterator.hasNext()) {
