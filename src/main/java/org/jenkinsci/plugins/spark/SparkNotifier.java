@@ -15,21 +15,22 @@ import org.jenkinsci.plugins.spark.client.SparkClient;
 import org.jenkinsci.plugins.spark.token.SparkToken;
 import org.jenkinsci.plugins.tokenmacro.MacroEvaluationException;
 import org.jenkinsci.plugins.tokenmacro.TokenMacro;
-import hudson.plugins.emailext.plugins.recipients.RecipientProviderUtilities;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
+
+import com.google.common.base.Strings;
 
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.BuildListener;
 import hudson.model.Result;
-import hudson.model.User;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.model.User;
+import hudson.plugins.emailext.plugins.recipients.RecipientProviderUtilities;
 import hudson.scm.ChangeLogSet;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
@@ -37,10 +38,10 @@ import hudson.tasks.Mailer;
 import hudson.tasks.Notifier;
 import hudson.tasks.Publisher;
 import hudson.tasks.test.AbstractTestResultAction;
-import jenkins.tasks.SimpleBuildStep;
 import hudson.util.CopyOnWriteList;
 import hudson.util.FormValidation;
 import jenkins.model.Jenkins;
+import jenkins.tasks.SimpleBuildStep;
 import net.java.sezpoz.Index;
 import net.java.sezpoz.IndexItem;
 import net.sf.json.JSONObject;
@@ -58,10 +59,11 @@ public class SparkNotifier extends Notifier implements SimpleBuildStep {
 	private boolean invitetoroom;
 	private boolean attachtestresult = true;
 	private final String sparkRoomName;
+	private final String publishContentPrefix;
 	private final String publishContent;
 
 	@DataBoundConstructor
-	public SparkNotifier(boolean disable, boolean notnotifyifsuccess, String sparkRoomName, String publishContent,
+	public SparkNotifier(boolean disable, boolean notnotifyifsuccess, String sparkRoomName, String publishContentPrefix, String publishContent,
 	        boolean invitetoroom, boolean attachtestresult, boolean attachcodechange) {
 		this.disable = disable;
 		this.attachtestresult = attachtestresult;
@@ -69,9 +71,14 @@ public class SparkNotifier extends Notifier implements SimpleBuildStep {
 		this.invitetoroom = invitetoroom;
 		this.attachcodechange = attachcodechange;
 		this.sparkRoomName = sparkRoomName;
+		this.publishContentPrefix = publishContentPrefix;
 		this.publishContent = publishContent;
 	}
 
+	public String getPublishContentPrefix() {
+		return publishContentPrefix;
+	}
+	
 	/**
 	 * We'll use this from the <tt>config.jelly</tt>.
 	 */
@@ -132,7 +139,9 @@ public class SparkNotifier extends Notifier implements SimpleBuildStep {
 			SparkRoom sparkRoom = descriptor.getSparkRoom(sparkRoomName);
 
 			// notify content
-			SparkClient.sent(sparkRoom, "[message from cisco spark plugin for jenkins]");
+			if(!Strings.isNullOrEmpty(publishContentPrefix)) {
+				notifyCustomizedContentPrefix(logger, sparkRoom);
+			}
 			inviteCommittersIfNeed(build, logger, sparkRoom);
 			atCommitters(build, sparkRoom, logger);
 			notifyCustomizedContent(build, workspace, listener, logger, sparkRoom);
@@ -140,14 +149,17 @@ public class SparkNotifier extends Notifier implements SimpleBuildStep {
 				notifyTestResultIfExisted(build, sparkRoom, logger);
 			if (attachcodechange)
 				notifyCodeChanges(build, sparkRoom, logger);
-			SparkClient.sent(sparkRoom, "[message from cisco spark plugin for jenkins]");
-
 			log(logger, "================[end][success]=================");
 		} catch (Exception e) {
 			log(logger, e.getMessage());
 			log(logger, Arrays.toString(e.getStackTrace()));
 			log(logger, "================[end][failure]=================");
 		}
+	}
+
+	private void notifyCustomizedContentPrefix(PrintStream logger, SparkRoom sparkRoom) throws Exception {
+		log(logger, "[Publish Content]Content prefix: " + publishContentPrefix);
+		SparkClient.sent(sparkRoom, publishContentPrefix);
 	}
 
 	private void log(PrintStream logger, String msg) {

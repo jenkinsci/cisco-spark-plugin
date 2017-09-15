@@ -23,10 +23,15 @@
                 </j:forEach>
               </select>
             </f:entry>
+            
+  <f:entry title="Notification Content Prefix" field="publishContentPrefix">
+    <f:textbox default="[message from cisco spark plugin for jenkins]" />
+  </f:entry>
+  
   <f:entry title="Notification Content" field="publishContent">
     <f:textbox default="$${DEFAULT_CONTENT}" />
   </f:entry>
-  
+    
   <f:entry field="invitetoroom">
   <f:checkbox name="invitetoroom" checked="${instance.invitetoroom}"/>
   <label>Invite committers to room if build is fail</label>
