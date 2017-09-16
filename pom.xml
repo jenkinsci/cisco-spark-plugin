@@ -101,13 +101,24 @@
 	</scm>
 
 	<!-- mvn -X -B -Dmaven.test.skip=true deploy -->
-	<distributionManagement>
-		<repository>
-			<id>maven.jenkins-ci.org</id>
-			<url>https://repo.jenkins-ci.org/content/repositories/releases/</url>
-		</repository>
-	</distributionManagement>
+	<!-- add followed statements into setting.mxl for releasing plugin -->
+	<!--
+		<server>
+		      <id>repo.jenkins-ci.org</id> 
+		      <username>fujian</username>
+		      <password>******</password>
+		</server>
+	-->
+        <distributionManagement>
+                <repository>
+                        <id>repo.jenkins-ci.org</id>
+                        <url>https://repo.jenkins-ci.org/releases</url>
+                </repository>
+        </distributionManagement>
 
+
+
+	
 	<licenses>
 		<license>
 			<name>MIT License</name>
